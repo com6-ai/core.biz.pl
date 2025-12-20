@@ -34,28 +34,26 @@
         .card-header { background-color: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-col); font-weight: 600; letter-spacing: 1px; }
 
         /* Ceny */
-        .price-up { color: var(--neon-green); }
-        .price-down { color: var(--neon-red); }
         .source-title { color: var(--btc-orange); font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; }
 
-        /* Fear & Greed / Halving */
+        /* Metrics */
         .metric-box { text-align: center; padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.03); }
         .metric-value { font-size: 1.8rem; font-weight: bold; }
         .metric-label { font-size: 0.8rem; color: #8b949e; text-transform: uppercase; }
 
-        /* Explorer */
+        /* Explorer Tools */
         .expert-json { background-color: #000; color: #0f0; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto; display: none; border: 1px solid #333; }
         .qr-container canvas { border: 5px solid #fff; border-radius: 5px; }
-
-        /* Quantum Section - Style Raportu */
+        
+        /* Quantum Section - Raport Techniczny */
         .quantum-report-box {
             background: linear-gradient(45deg, #1a0505 0%, #121212 100%);
             border: 1px solid #842029;
         }
         .quantum-alert { background-color: #2c0b0e; border: 1px solid #842029; color: #ea868f; }
         .quantum-safe { background-color: #0b2c14; border: 1px solid #0f5132; color: #75b798; }
-        
-        /* Stopki, Linki */
+
+        /* Linki */
         .satoshi-link { color: var(--btc-orange); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .satoshi-link:hover { color: #fff; }
         
@@ -132,7 +130,7 @@
                         <div class="source-title">KRAKEN</div>
                         <div id="price-kraken" class="fw-bold fs-5">...</div>
                     </div>
-                    <div class="text-center">
+                    <div class="text-center border-start border-secondary ps-4">
                         <div class="source-title">COINBASE</div>
                         <div id="price-coinbase" class="fw-bold fs-5">...</div>
                     </div>
@@ -277,7 +275,6 @@
                         <ul class="list-unstyled">
                             <li class="mb-3">
                                 <i class="fa-solid fa-user-secret text-warning"></i> <strong>Satoshi Nakamoto:</strong><br>
-                                <span class="small text-secondary">Posiada łącznie ok. 1.1 mln BTC (na tysiącach adresów). Jego symboliczny adres (Genesis) to:</span><br>
                                 <span class="satoshi-link small font-monospace" onclick="checkSatoshi()">1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa</span>
                                 <span class="badge bg-danger ms-2">P2PK</span>
                             </li>
@@ -360,9 +357,8 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item bg-dark text-light border-secondary"><strong>Satoshi (Sat):</strong> Najmniejsza jednostka Bitcoina. 1 BTC = 100,000,000 sat.</li>
                         <li class="list-group-item bg-dark text-light border-secondary"><strong>Mempool:</strong> "Poczekalnia" dla transakcji, które nie zostały jeszcze dodane do bloku.</li>
-                        <li class="list-group-item bg-dark text-light border-secondary"><strong>Halving:</strong> Wydarzenie co 4 lata, zmniejszające nagrodę dla górników o połowę.</li>
-                        <li class="list-group-item bg-dark text-light border-secondary"><strong>UTXO:</strong> Unspent Transaction Output - reszta z transakcji, którą możesz wydać.</li>
-                        <li class="list-group-item bg-dark text-light border-secondary"><strong>Qubit:</strong> Bit kwantowy. Podstawa mocy obliczeniowej komputerów kwantowych.</li>
+                        <li class="list-group-item bg-dark text-light border-secondary"><strong>Halving:</strong> Zmniejszenie nagrody dla górników o połowę (co 4 lata).</li>
+                        <li class="list-group-item bg-dark text-light border-secondary"><strong>P2PK:</strong> Pay To Public Key - stary, niebezpieczny typ adresu.</li>
                     </ul>
                 </div>
             </div>
@@ -386,72 +382,49 @@
         let currentBtcPrice = 0;
         const formatUSD = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
 
-        // --- 1. ODLICZANIE HALVING (Estymacja) ---
+        // --- FUNKCJE ---
         async function updateHalving() {
             try {
-                // Pobierz wysokość bloku
                 const res = await fetch('https://mempool.space/api/blocks/tip/height');
-                const height = await res.text();
-                const currentHeight = parseInt(height);
-                
-                // Halvingi są co 210,000 bloków. Ostatni był przy 840,000. Następny: 1,050,000.
+                const height = parseInt(await res.text());
                 const nextHalvingBlock = 1050000;
-                const blocksLeft = nextHalvingBlock - currentHeight;
-                const minutesLeft = blocksLeft * 10; 
-                const daysLeft = Math.floor(minutesLeft / 60 / 24);
-                
+                const daysLeft = Math.floor((nextHalvingBlock - height) * 10 / 60 / 24);
                 document.getElementById('halving-days').innerText = daysLeft;
-            } catch(e) { console.error(e); }
+            } catch(e) {}
         }
 
-        // --- 2. FEAR & GREED INDEX ---
         async function fetchFnG() {
             try {
                 const res = await fetch('https://api.alternative.me/fng/');
                 const data = await res.json();
                 const val = data.data[0].value;
-                const txt = data.data[0].value_classification;
-                
                 const elVal = document.getElementById('fng-value');
                 elVal.innerText = val;
-                
-                // Kolory
-                if(val < 25) elVal.className = "metric-value text-danger"; // Extreme Fear
-                else if(val > 75) elVal.className = "metric-value text-success"; // Greed
-                else elVal.className = "metric-value text-warning"; // Neutral
-                
-                document.getElementById('fng-text').innerText = txt;
-            } catch(e) { console.error(e); }
+                if(val < 25) elVal.className = "metric-value text-danger";
+                else if(val > 75) elVal.className = "metric-value text-success";
+                else elVal.className = "metric-value text-warning";
+                document.getElementById('fng-text').innerText = data.data[0].value_classification;
+            } catch(e) {}
         }
 
-        // --- 3. CENY & CHART ---
         async function fetchPrices() {
             try {
-                // Binance
                 let res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
                 let data = await res.json();
                 currentBtcPrice = parseFloat(data.price);
                 document.getElementById('price-binance').innerText = formatUSD(currentBtcPrice);
-                
-                // Konwerter Update (jeśli pole puste, nie ruszaj)
-                // Ale możemy zaktualizować przelicznik w pamięci
             } catch(e) {}
-            
-            // Inne giełdy (uproszczone dla szybkości kodu)
             try {
                 let res = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
                 let data = await res.json();
                 document.getElementById('price-coinbase').innerText = formatUSD(parseFloat(data.data.amount));
             } catch(e) {}
-            
             try {
                 let res = await fetch('https://api.kraken.com/0/public/Ticker?pair=XBTUSD');
                 let data = await res.json();
                 let key = Object.keys(data.result)[0];
                 document.getElementById('price-kraken').innerText = formatUSD(parseFloat(data.result[key].c[0]));
             } catch(e) {}
-
-            // Fees
             try {
                 let res = await fetch('https://mempool.space/api/v1/fees/recommended');
                 let fees = await res.json();
@@ -459,7 +432,6 @@
                 document.getElementById('fee-mid').innerText = fees.halfHourFee;
                 document.getElementById('fee-low').innerText = fees.hourFee;
             } catch(e) {}
-            
             document.getElementById('last-update').innerText = new Date().toLocaleTimeString();
         }
 
@@ -472,7 +444,6 @@
                     const d = new Date(item[0]);
                     return d.getDate() + '/' + (d.getMonth()+1) + ' ' + d.getHours() + ':00';
                 });
-
                 const ctx = document.getElementById('btcChart').getContext('2d');
                 new Chart(ctx, {
                     type: 'line',
@@ -493,39 +464,17 @@
                         responsive: true,
                         plugins: { legend: { display: false } },
                         interaction: { intersect: false, mode: 'index' },
-                        scales: {
-                            y: { grid: { color: '#222' }, ticks: { color: '#666' } },
-                            x: { display: false }
-                        }
+                        scales: { y: { grid: { color: '#222' }, ticks: { color: '#666' } }, x: { display: false } }
                     }
                 });
             } catch(e) {}
         }
 
-        // --- 4. KALKULATOR SATS ---
+        // --- NARZĘDZIA ---
         const calcUsd = document.getElementById('calc-usd');
         const calcSats = document.getElementById('calc-sats');
-
-        calcUsd.addEventListener('input', () => {
-            if(currentBtcPrice > 0) {
-                const usd = parseFloat(calcUsd.value);
-                const btc = usd / currentBtcPrice;
-                const sats = Math.floor(btc * 100000000);
-                calcSats.value = sats;
-            }
-        });
-
-        calcSats.addEventListener('input', () => {
-            if(currentBtcPrice > 0) {
-                const sats = parseFloat(calcSats.value);
-                const btc = sats / 100000000;
-                const usd = btc * currentBtcPrice;
-                calcUsd.value = usd.toFixed(2);
-            }
-        });
-
-        // --- 5. EXPLORER LOGIC ---
-        let lastJsonData = null;
+        calcUsd.addEventListener('input', () => { if(currentBtcPrice > 0) calcSats.value = Math.floor((parseFloat(calcUsd.value) / currentBtcPrice) * 100000000); });
+        calcSats.addEventListener('input', () => { if(currentBtcPrice > 0) calcUsd.value = ((parseFloat(calcSats.value) / 100000000) * currentBtcPrice).toFixed(2); });
 
         function checkSatoshi() {
             document.getElementById('searchInput').value = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
@@ -535,116 +484,54 @@
 
         function generatePDF() {
             const element = document.getElementById('pdf-content');
-            const opt = {
-                margin: 10,
-                filename: 'bitcoin_report.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-            };
-            html2pdf().set(opt).from(element).save();
+            html2pdf().set({ margin: 10, filename: 'bitcoin_report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } }).from(element).save();
         }
 
+        document.getElementById('expertToggle').addEventListener('change', function() { document.getElementById('json-viewer').style.display = this.checked ? 'block' : 'none'; });
+
+        // --- EXPLORER CORE ---
         document.getElementById('btnSearch').addEventListener('click', async () => {
             const address = document.getElementById('searchInput').value.trim();
             const resBox = document.getElementById('explorer-result');
             const errBox = document.getElementById('explorer-error');
             const qrDiv = document.getElementById('qrcode');
-            const jsonViewer = document.getElementById('json-viewer');
-
-            resBox.classList.add('d-none');
-            errBox.classList.add('d-none');
-            qrDiv.innerHTML = ""; // Clear QR
-
+            
+            resBox.classList.add('d-none'); errBox.classList.add('d-none'); qrDiv.innerHTML = "";
             if (!address) return;
-
-            const btn = document.getElementById('btnSearch');
-            btn.innerText = "ANALIZA...";
-            btn.disabled = true;
+            const btn = document.getElementById('btnSearch'); btn.innerText = "ANALIZA..."; btn.disabled = true;
 
             try {
                 const response = await fetch(`https://mempool.space/api/address/${address}`);
                 if (!response.ok) throw new Error("Nie znaleziono adresu.");
-                
                 const data = await response.json();
-                lastJsonData = data; // Save for expert mode
-
-                const funded = data.chain_stats.funded_txo_sum + data.mempool_stats.funded_txo_sum;
-                const spent = data.chain_stats.spent_txo_sum + data.mempool_stats.spent_txo_sum;
-                const balanceSats = funded - spent;
-                const balanceBTC = balanceSats / 100000000;
-                const balanceUSD = balanceBTC * currentBtcPrice;
-
-                // Fill UI
+                
+                const balanceBTC = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
                 document.getElementById('res-address').innerText = address;
                 document.getElementById('res-balance').innerText = balanceBTC.toFixed(8) + " BTC";
-                document.getElementById('res-balance-usd').innerText = formatUSD(balanceUSD);
-                document.getElementById('res-txs').innerText = data.chain_stats.tx_count + data.mempool_stats.tx_count;
-                document.getElementById('res-received').innerText = (funded / 100000000).toFixed(8);
+                document.getElementById('res-balance-usd').innerText = formatUSD(balanceBTC * currentBtcPrice);
+                document.getElementById('res-txs').innerText = data.chain_stats.tx_count;
+                
+                new QRCode(qrDiv, { text: address, width: 100, height: 100 });
 
-                // Generate QR
-                new QRCode(qrDiv, {
-                    text: address,
-                    width: 100,
-                    height: 100,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
-
-                // Quantum Check
                 const isSatoshi = address === "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
-                const spentCount = data.chain_stats.spent_txo_count + data.mempool_stats.spent_txo_count;
+                const spentCount = data.chain_stats.spent_txo_count;
                 const qCard = document.getElementById('quantum-card');
                 const qContent = document.getElementById('quantum-status-content');
 
                 if (spentCount > 0 || isSatoshi) {
-                    qCard.className = "card h-100 border-danger bg-danger bg-opacity-10";
-                    qContent.innerHTML = `
-                        <h6 class="text-danger fw-bold text-uppercase">KLUCZ UJAWNIONY (Etap 1)</h6>
-                        <p class="small mb-0">Adres wykonał transakcję lub jest publicznie znany (Genesis). Klucz publiczny dostępny w blockchainie.</p>
-                        <hr>
-                        <strong class="text-danger">RYZYKO WYSOKIE</strong>
-                    `;
+                    qCard.className = "card h-100 quantum-alert";
+                    qContent.innerHTML = `<h6 class="fw-bold">KLUCZ UJAWNIONY (Etap 1)</h6><p class="small">Adres wykonał transakcję lub jest publicznie znany (Genesis).</p><hr><strong>RYZYKO WYSOKIE</strong>`;
                 } else {
-                    qCard.className = "card h-100 border-success bg-success bg-opacity-10";
-                    qContent.innerHTML = `
-                        <h6 class="text-success fw-bold text-uppercase">KLUCZ ZABEZPIECZONY</h6>
-                        <p class="small mb-0">Brak transakcji wychodzących. Klucz publiczny ukryty za hashem (SHA-256).</p>
-                        <hr>
-                        <strong class="text-success">BEZPIECZNY (Do momentu wydania)</strong>
-                    `;
+                    qCard.className = "card h-100 quantum-safe";
+                    qContent.innerHTML = `<h6 class="fw-bold">KLUCZ ZABEZPIECZONY</h6><p class="small">Klucz publiczny ukryty za hashem (SHA-256).</p><hr><strong>BEZPIECZNY</strong>`;
                 }
-
-                // Update JSON Viewer text
-                jsonViewer.innerText = JSON.stringify(data, null, 2);
-
+                document.getElementById('json-viewer').innerText = JSON.stringify(data, null, 2);
                 resBox.classList.remove('d-none');
-            } catch (err) {
-                errBox.innerText = err.message;
-                errBox.classList.remove('d-none');
-            } finally {
-                btn.innerText = "ANALIZUJ";
-                btn.disabled = false;
-            }
-        });
-
-        // Expert Toggle Logic
-        document.getElementById('expertToggle').addEventListener('change', function() {
-            const jsonViewer = document.getElementById('json-viewer');
-            if(this.checked) {
-                jsonViewer.style.display = 'block';
-            } else {
-                jsonViewer.style.display = 'none';
-            }
+            } catch (err) { errBox.innerText = err.message; errBox.classList.remove('d-none'); } finally { btn.innerText = "ANALIZUJ"; btn.disabled = false; }
         });
 
         // INIT
-        fetchFnG();
-        updateHalving();
-        fetchPrices();
-        loadChart();
-        setInterval(fetchPrices, 60000);
+        fetchFnG(); updateHalving(); fetchPrices(); loadChart(); setInterval(fetchPrices, 60000);
     </script>
 </body>
 </html>

@@ -32,8 +32,13 @@ function displayWallet() {
 // Generuj nowy portfel
 document.getElementById('generateWallet').addEventListener('click', () => {
     wallet.address = 'bc1' + Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 9);
-    wallet.balance = 0;
-    wallet.transactions = [];
+    wallet.balance = 1.00000000; // Saldo początkowe
+    wallet.transactions = [{
+        type: 'receive',
+        address: 'Genesis Block',
+        amount: 1.00000000,
+        date: new Date().toLocaleString()
+    }];
     saveWallet();
     displayWallet();
 });
@@ -73,6 +78,9 @@ function displayTransactions() {
     wallet.transactions.forEach(tx => {
         const li = document.createElement('li');
         li.textContent = `${tx.date} - ${tx.type === 'send' ? 'Wysłano' : 'Otrzymano'} ${tx.amount} BTC do/z ${tx.address}`;
+        if (tx.type === 'send') {
+            li.classList.add('send');
+        }
         list.appendChild(li);
     });
 }
